@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEditor;
 using System.Collections.Generic;
+using Codice.CM.Common.Purge;
 
 
 namespace SonchoDev.Editor
@@ -9,6 +10,7 @@ namespace SonchoDev.Editor
     public class MaterialSwitcherWindow : EditorWindow
     {   
         private MaterialData materialData;
+        private Dictionary<Renderer, Material> originalMaterials = new Dictionary<Renderer, Material>();
 
         [MenuItem("SonchoDev/Material Switcher")]
         public static void ShowWindow()
@@ -19,7 +21,7 @@ namespace SonchoDev.Editor
         void OnGUI()
         {
             GUILayout.Label("Select Material from Asset", EditorStyles.boldLabel);
-
+            
             materialData = EditorGUILayout.ObjectField("Material Data", materialData, typeof(MaterialData), false) as MaterialData;
 
             if (materialData != null)
@@ -31,7 +33,13 @@ namespace SonchoDev.Editor
                         SwitchAllMaterials(material);
                     }
                 }
+
+                if (GUILayout.Button("revert to original materials"))
+                {
+                    RevertMaterials();
+                }
             }
+            
         }
 
         private void SwitchAllMaterials(Material newMaterial)
@@ -40,9 +48,26 @@ namespace SonchoDev.Editor
             {
                 Undo.RecordObject(renderer, "Material Switch");
                 renderer.sharedMaterial = newMaterial;
+                
+                if (!originalMaterials.ContainsKey(renderer))
+                {
+                    originalMaterials.Add(renderer, renderer.sharedMaterial);
+                }
             }
 
             Debug.Log("All materials have been switched to " + newMaterial.name);
+        }
+
+        private void RevertMaterials()
+        {
+            foreach (var item in originalMaterials)
+            {
+                var renderer = item.Key;
+                var originalMaterial = item.Value;
+                Undo.RecordObject(renderer, "Material Revert");
+                renderer.sharedMaterial = originalMaterial;
+            }
+            Debug.Log("Materials  reverted to their original state");
         }
     }
 }
